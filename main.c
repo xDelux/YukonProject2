@@ -23,15 +23,28 @@ typedef struct Card {
 } Card;
 
 typedef struct CardNode {
-    Card *card;
+    struct Card *card;
     struct CardNode *next;
     struct CardNode *prev;
 } CardNode;
 
 typedef struct Pile {
-    CardNode *head;
+    char *id;
+    struct CardNode *head;
+    struct CardNode *tail;
+    struct Pile *next;
+    struct Pile *prev;
     int cardsInPile;
 } Pile;
+
+typedef struct Foundation {
+    char *id;
+    struct CardNode *head;
+    struct CardNode *tail;
+    struct Foundation *next;
+    struct Foundation *prev;
+    int cardsInPile;
+} Foundation;
 
 const char *typeToCharPtr();
 
@@ -53,27 +66,76 @@ int main(void) {
 
 void update() {
     printf("C1\tC2\tC3\tC4\tC5\tC6\tC7\t\t\t\n\n");
-    printf("\t\t\t\t\t\t\t[]\tF1\n");
-    printf("\n");
-    printf("\t\t\t\t\t\t\t[]\tF2\n");
-    printf("\n");
-    printf("\t\t\t\t\t\t\t[]\tF3\n");
-    printf("\n");
-    printf("\t\t\t\t\t\t\t[]\tF4\n");
+    // Counters
+    int line, tails, i;
+    line = tails = 0;
+    // Pointers for the piles, foundations and nodes.
+    Pile *pile;
+    Foundation *foundation:
+    CardNode *cn;
+    while(1)
+    {
+        
+        for (i = 0; i < COLUM_SIZE; i++) {
+            if(pile != NULL) {
+                cn = pile.tail->card;
+                if(line != 0) {
+                    for (int i = 0; i < line; i++) {
+                        if(cn->next != NULL) {
+                            cn->next; }
+                        } else {
+                            tails++; 
+                            goto;
+                        } 
+                    }
+                    printCard(&cn);
+                } else {
+                    tails++;
+                }               
+            }
+            printf("\t")
+            pile = pile.next;
+        }
+        if(line == 2 || line == 4 || line == 6 || line == 8) {
+                printCard(foundation.tail->card))
+                foundation = foundation.next;
+            }
+        line++;
+        printf("\n");
+        if(tails == 7) {
+            return;
+        }
+        tails == 0;
+    
     printf("LAST Command: %s\n", lastCom);
     printf("Message: %s\n", message);
     printf("INPUT > ");
 }
 
+void printCard(Card *card) {
+    if(card->isHidden == 0) {
+        printf("%s", card->type);
+        printf("%s", card->value);
+    } else {
+        printf("[]");
+    }
+}
 //Create all card information
 void initCards() {
     char id[2];
-    int count = DECK_SIZE;
-    for (int i = 0; i < count; i++)
-    {
-        
-    }
-    
+    int count = DECK_SIZE/4;
+        for (int i = 0; i < count; i++) {
+            
+        }
+        for (int i = 0; i < count; i++) {
+            
+        }
+        for (int i = 0; i < count; i++) {
+            
+        }
+        for (int i = 0; i < count; i++) {
+           
+        }
 }
 
 //Allocate memory for a node
@@ -88,14 +150,14 @@ CardNode *creatCardNode(Card *card) {
     return newCardNode;
 }
 
-void push(struct CardNode node, struct CardNode** head) {
-    node->next = (*head);
-    node->prev = NULL;
-
-    if((*head) != NULL)
-        (*head)->prev = node;    
-    
-    (*head) = node;    
+void push(pile *pile, Card *card) {
+  CardNode tail = pile->tail;
+  if (tail == NULL) {
+    pile->head = createCardNode(card);
+  } else {
+    tail->next = createCardNode(card);
+  }
+  pile->cardsInPile++;
 }
 // Load a deck of cards or create a new one if not specified
 FILE *load(char input[]) {
