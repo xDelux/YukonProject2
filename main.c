@@ -55,7 +55,8 @@ Pile piles[7];
 struct Foundation foundations[4];
 
 const char *typeToCharPtr();
-void push (Pile *pile, Card *card);
+void pushNode(Pile *pile, Card *card);
+void pushPile(Pile *pile);
 void update();
 FILE *load();
 void initCards();
@@ -90,10 +91,10 @@ void update()
     Card *c = NULL;
     while (1)
     {   
-        
+        printf("Outer loop reached");
         for (i = 0; i < COLUM_SIZE; i++)
         {
-            
+            printf("Middle loop reached");
             if (pile != NULL)
             {
                 cn = pile->tail;
@@ -101,7 +102,7 @@ void update()
                 {
                     for (int i = 0; i < line; i++)
                     {
-                        
+                        printf("Inner loop reached");
                         if (cn->next != NULL)
                         {
                             cn->next;
@@ -109,15 +110,13 @@ void update()
                         else
                         {
                         tails++;
-                        
-                        continue;
+                        break;
                         }
                     }   
                 }
                 c = cn->card;
                 printCard(c);
-            }
-            else
+            } else
             {
                 printf("tails hehe");
                 tails++;
@@ -125,7 +124,7 @@ void update()
         }
         printf("\t");
         pile = pile->next;
-
+        
         if (line == 2 || line == 4 || line == 6 || line == 8)
         {
                 if(foundation->tail != NULL) {
@@ -138,6 +137,7 @@ void update()
         }
         printf("\n");
         if(tails == 7 && line >= 8) {
+            printf("break reached");
             break;
         }
         tails == 0;
@@ -175,7 +175,20 @@ void initCards()
     }
 }
 
-void push(Pile *pile, Card *card)
+void insertAfterPile(Pile *prevPile, char *name) {
+    if(prevPile == NULL) {
+        return;
+    }
+    struct Pile newPile = (struct Pile*)malloc(sizeof(struct Pile));
+    newPile->id = name;
+
+    newPile->prev = nextPile->prev;
+    next->prev = newPile;
+
+    newPile
+}
+
+void pushNodeInPile(Pile *pile, Card *card)
 {
     CardNode *tail = pile->tail;
     if (tail == NULL)
