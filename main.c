@@ -6,7 +6,7 @@
 #include <time.h>
 
 #define DECK_SIZE 52
-#define PILE_SIZE 4
+#define FOUNDATION_SIZE 4
 #define COLUM_SIZE 7
 
 typedef struct Card
@@ -25,7 +25,7 @@ typedef struct CardNode
 
 typedef struct Pile
 {
-    char *id;
+    char id[2];
     struct CardNode *head;
     struct CardNode *tail;
     struct Pile *next;
@@ -35,7 +35,7 @@ typedef struct Pile
 
 typedef struct Foundation
 {
-    char *id;
+    char id[2];
     struct CardNode *head;
     struct CardNode *tail;
     struct Foundation *next;
@@ -50,30 +50,69 @@ char lastCom[10] = "NONE";
 char types[4] = {'H', 'D', 'S', 'C'};
 char values[13] = {'A', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K'};
 
-Card deck[4][13];
-Pile piles[7];
-struct Foundation foundations[4];
+Card deck[13][4];
 
-const char *typeToCharPtr();
-void pushNode(Pile *pile, Card *card);
-void pushPile(Pile *pile);
+// First pile and foundation
+Pile *C1;
+Foundation *F1;
+
+// 
 void update();
-FILE *load();
-void initCards();
-CardNode *createCardNode(Card *card);
-void printCard(Card *card);
 void newDeck();
+void printCard(Card *card);
+
+//
+void appendNodeInPile(Pile *pile, Card *card);
+void appendPile(Pile *head, char *name);
+void appendFoundation(Foundation *head, char *name);
+
+// Command functions
+FILE *load();
+void show();
+
+// Initialization
+void initCards();
+void initPilesNFoundations();
 
 int main(void)
 {
     initCards();
+    initPilesNFoundations();
+    
+    
+    /* Pile *pile = C1;
+    Foundation *found = F1;
+    
+    for (int i = 0; i < 7; i++)
+    {
+        printf("%s -> %s\n", pile->id, pile->next->id);
+        pile = pile->next;
+    }
+    for (int i = 0; i < 4; i++)
+    {
+        printf("%s -> %s\n", found->id, found->next->id);
+        found = found->next;
+    }
+    pile = C1;
+    pile = pile->next;
+    CardNode *n = pile->head;
+    while(1) {
+        printCard(n->card);
+        if(n->next == NULL) {break;}
+        n = n->next;
+    } */
     do
     {
         update();
         scanf("%s", &input);
-        // if(strcmp(input, "LD") == 0)
+        if(strcmp(input, "LD") == 0) {
+            newDeck();
+        }
+        if(strcmp(input, "SW") == 0) {
+            show();
+        }
 
-    } while (strcmp(input, "QQ") != 0);
+    } while (strcmp(input, "QQ") != 0); 
 }
 
 // Prints the console
@@ -81,86 +120,79 @@ void update()
 {
     printf("C1\tC2\tC3\tC4\tC5\tC6\tC7\t\t\t\n\n");
     // Counters
-    int line, tails, i;
+    int line, tails;
     line = tails = 0;
-    i = 1;
+
     // Pointers for the piles, foundations and nodes.
-    Pile *pile = &piles[0];
-    Foundation *foundation = &foundations[0];
+    Pile *pile = C1;
+    int DONE = 1;
+    int dontPrint = 1;
+    Foundation *foundation = F1;
     CardNode *cn = NULL;
-    Card *c = NULL;
-    while (1)
+    while (DONE)
     {   
-        printf("Outer loop reached");
-        for (i = 0; i < COLUM_SIZE; i++)
+        for (int i = 0; i < COLUM_SIZE; i++)
         {
-            printf("Middle loop reached");
-            if (pile != NULL)
+            if (pile->head != NULL)
             {
-                cn = pile->tail;
+                cn = pile->head;
                 if (line != 0)
                 {
                     for (int i = 0; i < line; i++)
-                    {
-                        printf("Inner loop reached");
-                        if (cn->next != NULL)
-                        {
-                            cn->next;
-                        }
-                        else
-                        {
-                        tails++;
-                        break;
+                    {   
+                        // Traverse for every line 
+                        if(cn->next == NULL){
+                            tails++;
+                            dontPrint = 0;
+                            break;
+                        } else {
+                            cn = cn->next;
                         }
                     }   
                 }
-                c = cn->card;
-                printCard(c);
+                if(dontPrint){printCard(cn->card);}
+                
+                
             } else
             {
-                printf("tails hehe");
                 tails++;
             }
+            printf("\t");
+            if(tails >= 7 && line >= 6) {DONE = 0;}
+            pile = pile->next;
+            dontPrint = 1;
         }
-        printf("\t");
-        pile = pile->next;
-        
-        if (line == 2 || line == 4 || line == 6 || line == 8)
-        {
+        if (line == 0 || line == 2 || line == 4 || line == 6)
+            {
                 if(foundation->tail != NULL) {
-                    c = foundation->tail->card;
-                    printCard(c);
+                    cn = foundation->tail;
+                    printCard(cn->card);
                 }
-                printf("F%d", i);
+                printf(" %s", foundation->id);
                 foundation = foundation->next;
-                i++;
-        }
-        printf("\n");
-        if(tails == 7 && line >= 8) {
-            printf("break reached");
-            break;
-        }
+            }
         tails == 0;
         line++;
-        
+        printf("\n");
     }
     printf("LAST Command: %s\n", lastCom);
     printf("Message: %s\n", message);
     printf("INPUT > ");
 }
-
-void printCard(Card *card)
+void printCard(Card* card)
 {
     if (card->isHidden == 0)
     {
-        printf("%s", card->type);
-        printf("%s", card->value);
+        printf("%c", card->value);
+        printf("%c", card->type);
+        
     }
     else
     {
         printf("[]");
     }
 }
+
 //Creates all struct Card information
 void initCards()
 {
@@ -169,38 +201,134 @@ void initCards()
     for (int j = 0; j < 4; j++) {
         for (int i = 0; i < count/4; i++) {
         // Order goes 0 = hearts, 1 = diamonds, 2 = spades, 3 = clovers
-        deck[j][i].type = types[j];
-        deck[j][i].value = values[i];
+        deck[i][j].value = values[i];
+        deck[i][j].type = types[j];
+        deck[i][j].isHidden = 0;
         }
+        
+    }
+}
+void initPilesNFoundations() {
+    
+    C1 = (Pile*)malloc(sizeof(struct Pile));
+    strcpy(C1->id, "C1");
+    C1->prev = NULL; C1->next = NULL; C1->tail = NULL; C1->head = NULL;
+    
+    F1 = (Foundation*)malloc(sizeof(struct Foundation));
+    strcpy(F1->id, "F1"); 
+    F1->prev = NULL; F1->next = NULL; F1->tail = NULL; F1-> head = NULL;
+    int piles, foundations;
+    piles = COLUM_SIZE - 1;
+    foundations = FOUNDATION_SIZE - 1;
+    
+    char pId[2];
+    char fId[2];
+    for (int j = 0; j < foundations; j++)
+    {
+        sprintf(fId, "F%d", j+2);
+        appendFoundation(F1, fId);
+    }
+
+    for (int i = 0; i < piles; i++)
+    {   
+        sprintf(pId, "C%d", i+2);
+        appendPile(C1, pId);
+        
     }
 }
 
-void insertAfterPile(Pile *prevPile, char *name) {
-    if(prevPile == NULL) {
+void appendPile(Pile *head, char *name) {
+
+    //Make a new Pile and make th
+    struct Pile* newPile = (Pile*)malloc(sizeof(struct Pile));
+    struct Pile* last = head;
+
+    strcpy(newPile->id, name);
+
+    newPile->next = NULL;
+    
+    //If the list empty make the new Pile the head of the list.
+    if(head == NULL) {
+        newPile->prev = NULL;
+        newPile->next = NULL;
+        newPile->head = NULL;
+        head = newPile;
         return;
     }
-    struct Pile newPile = (struct Pile*)malloc(sizeof(struct Pile));
-    newPile->id = name;
 
-    newPile->prev = nextPile->prev;
-    next->prev = newPile;
-
-    newPile
-}
-
-void pushNodeInPile(Pile *pile, Card *card)
-{
-    CardNode *tail = pile->tail;
-    if (tail == NULL)
-    {
-        pile->head = createCardNode(card);
+    // Traverse
+    int i = 0;
+    while(last->next != NULL) {
+        last = last->next;
+        i++;
     }
-    else
+
+    //Set the pointers when hit the last node.
+    last->next = newPile;
+    newPile->prev = last;
+    newPile->head = NULL;
+
+    if(i == 5) {
+        newPile->next = head;
+    }
+    
+}
+void appendFoundation(Foundation *head, char *name) {
+    //Make a new Foundation and 
+    struct Foundation* newFound = (Foundation*)malloc(sizeof(struct Foundation));
+    struct Foundation* last = head;
+
+    strcpy(newFound->id, name);
+    newFound->next = NULL;
+    newFound->tail = NULL;
+    newFound->head = NULL;
+    
+    //If the list is empty make the new Foundation the head of the list.
+    if(head == NULL) {
+        newFound->prev = NULL;
+        head = newFound;
+        return;
+    }
+
+    // Traverse through the Foundation
+    while(last->next != NULL) {
+        last = last->next;
+    }
+
+    //Set the pointers when hit the last node.
+    last->next = newFound;
+    newFound->prev = last;
+}
+void appendNodeInPile(Pile *pile, Card *card)
+{
+    CardNode *headNode = pile->head;
+    
+    if (headNode == NULL)
     {
-        tail->next = createCardNode(card);
+        CardNode *newNode = (CardNode *)malloc(sizeof(CardNode));
+        newNode->card = card;
+        pile->head = newNode;
+        newNode->next = NULL;
+        newNode->prev = NULL;
+        return;
+    } 
+    else {
+        // Traverse
+        while(headNode->next != NULL) {
+            headNode = headNode->next;
+        }
+        
+        CardNode *newNode = (CardNode *)malloc(sizeof(CardNode));
+        newNode->card = card;
+        
+        newNode->next = NULL;
+        headNode->next = newNode;
+        newNode->prev = newNode;
+        
     }
     pile->cardsInPile++;
 }
+
 // Load a deck of cards or create a new one if not specified
 FILE *load(char input[])
 {
@@ -224,18 +352,40 @@ FILE *load(char input[])
         return NULL;
     }
 }
+void show() {
+    int cards = DECK_SIZE;
+    Pile *pile = C1;
+    CardNode *node = C1->head;
+    while(cards > 0) {
+        node->card->isHidden = 0;
+        if(node->next == NULL) {
+            pile = pile->next;
+        }
+        node = node->next;
+        cards--;
+    }
+    
+}
 
 void newDeck()
 {
+    Pile *pile = C1;
+    Card *card;
     int type, value;
-    type = value = 0;
-    for (int i = 0; i < 4; i++)
+    type = value =  0;
+        
+    for (int j = 0; j < 4; j++)
     {
-        for (int i = 0; i < DECK_SIZE / 4; i++)
-        {
-        }
+       for (int i = 0; i < 13; i++)
+       {
+            card = &deck[i][j];
+            card->isHidden = 1;
+            appendNodeInPile(pile, card);
+            pile = pile->next;    
+       }  
     }
 }
+    
 
 int cardValue(Card card)
 {
@@ -283,21 +433,6 @@ int cardValue(Card card)
     default:
         break;
     }
-}
-
-//Allocate memory for a node
-CardNode *createCardNode(Card *card)
-{
-    CardNode *newCardNode;
-    newCardNode = (CardNode *)malloc(sizeof(CardNode));
-    if (newCardNode == NULL)
-    {
-        strcpy(message, "MALLOC ERROR");
-        return NULL;
-    }
-    newCardNode->card = card;
-    newCardNode->next = 0;
-    return newCardNode;
 }
 
 int isBlack(struct Card c)
