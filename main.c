@@ -4,10 +4,21 @@
 #include <string.h>
 #include <memory.h>
 #include <time.h>
+#include <wchar.h>
+
+#include<fcntl.h>
+#include<io.h>
+
 
 #define DECK_SIZE 52
 #define FOUNDATION_SIZE 4
 #define COLUM_SIZE 7
+
+wchar_t *clubs = L"\u2663";
+wchar_t *diamonds = L"\u2666";
+wchar_t *hearts = L"\u2665";
+wchar_t *spades = L"\u2660";
+
 
 typedef struct CardNode
 {
@@ -26,42 +37,28 @@ typedef struct Pile
     struct CardNode *tail;
     struct Pile *next;
     struct Pile *prev;
-} Pile;
-
-/* typedef struct Foundation
-{
-    char id[2];
-    struct CardNode *head;
-    struct CardNode *tail;
-    struct Foundation *next;
-    struct Foundation *prev;
     int cardsInPile;
-} Foundation; */
+} Pile;
 
 // Print opertaions
 void printConsole();
-
-void printCard(Card *card);
-
+void printSuit(char type);
 // Node functions 
 //CardNode* makeNode(Card *card);
 void createNode();
-void removeNode();
+int removeNode();
 void createPile();
 void removePile();
-void moveCard(Pile *fromPile, Pile *toPile);
-void moveCards(Pile *fromPile, Pile *toPile, int cardIndex);
+void moveTailCard(Pile *fromPile, Pile *toPile);
+void moveCardAtIndex(Pile *fromPile, Pile *toPile, int cardIndex);
+void moveCardsFromIndex(Pile *fromPile, Pile *toPile, int cardIndex);
+void moveHeadCard(Pile *fromPile, Pile *toPile);
 
-void appendNodeInDeck(CardNode *node);
-void assignNodeInPile(Pile *pile, CardNode *node);
 
-
-void appendPile(Pile *head, char *name);
-void appendFoundation(Foundation *head, char *name);
 void newDeck();
-
+int loadFile(char *filename);
 // Command functions
-FILE *LD();
+void LD(char input[]);
 void SW();
 void SI(int split);
 void SR();
@@ -77,211 +74,147 @@ char input[10];
 char message[256] = "HELLO";
 char lastCom[10] = "NONE";
 
-char types[4] = {'H', 'D', 'S', 'C'};
-char values[13] = {'A', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K'};
-
-Card deck[13][4];
-
 // First pile and foundation
-Pile *pileHead;
-Pile *pileTail;
+Pile *pileHead = NULL;
+Pile *pileTail = NULL;
 
 
 int main(void)
 {
-    initCards();
+    //setmode(_fileno(stdout), _O_U16TEXT);
     initPilesNFoundations();
-
-    do
+    Pile *ref = pileHead->next;
+    LD("LD");
+    SW();
+    printConsole();
+    
+    
+    
+    //printConsole();
+    /*do
     {       
-        update();
+        printConsole();
         scanf("%s", &input);
         if(strcmp(input, "SW") == 0) {SW();}
-        if(strcmp(input, "LD") == 0) {LD();}
-        if(strcmp(input, "SR") == 0) {SR();}
-        if(strcmp(input, "T") == 0) {
-            time_t t;
-            CardNode *ref = startOfDeck;
-            srand((unsigned) time(&t));
-            for (int i = 0; i < rand() % 53; i++)
-            {
-                ref = ref->nextInDeck;
-            }
-            printCard(ref->card);
-            printf("->");
-            printCard(ref->nextInDeck->card);
-            puts("");
-            
-        }
+        if(strcmp(input, "LD") == 0) {LD(input);}
+        //if(strcmp(input, "SR") == 0) {SR();}
         
-    } while (strcmp(input, "QQ") != 0); 
+    } while (strcmp(input, "QQ") != 0); */
 }
 
 // Prints the console
-void update()
+void printConsole()
 {
-    printf("C1\tC2\tC3\tC4\tC5\tC6\tC7\t\t\t\n\n");
-    // Counters
-    int line, tails;
-    line = tails = 0;
-    // Pointers for the piles, foundations and nodes.
-    Pile *pile = C1;
-    int done = 0;
-    int dontPrint = 1;
-    Foundation *foundation = F1;
-    CardNode *cn = NULL;
-
-    if(game == 0) {
-        if(startOfDeck != NULL) {
-            cn = startOfDeck;
-        }
-        while(done == 0) {
-            for (int i = 0; i < COLUM_SIZE; i++)
-            {
-                if(cn != NULL) {
-                printCard(cn->card);
-                cn = cn->nextInDeck;
-                }
-                printf("\t");
-            }
-            if (line == 0 || line == 2 || line == 4 || line == 6)
-            {
-                printf("[]");
-                printf(" %s", foundation->id);
-                foundation = foundation->next;
-            } 
-            printf("\n");
-            if(cn == NULL && line >= 8) {done = 1;}
-            line++;
-        }
-    } else {
+    printf("C1\tC2\tC3\tC4\tC5\tC6\tC7\t\t\t\n\n");    
     
-    while (done == 0)
-    {   
-        for (int i = 0; i < COLUM_SIZE; i++)
-        {
-            if (pile->head != NULL)
-            {
-                cn = pile->head;
-                if (line != 0)
-                {
-                    for (int i = 0; i < line; i++)
-                    {   
-                        // Traverse for every line 
-                        if(cn->next == NULL){
-                            tails++;
-                            dontPrint = 0;
-                            break;
-                        } else {
-                            cn = cn->next;
-                        }
-                    }   
+    // Pointers for the piles, foundations and nodes.
+    Pile *F1, *Cx;
+    CardNode *temp = NULL;
+    F1 = pileHead->next->next->next->next->next->next->next; 
+    int done, endOfPile,column, row = 0;
+    done = endOfPile = column = 0;
+    while(1){
+        Cx = pileHead;
+
+        // navigate to column
+        for(int i = 0; i < column; i++){Cx = Cx->next;}
+
+        //navigate to row
+        if(Cx->head == NULL){ 
+            temp = NULL;
+            endOfPile++;
+        }else{
+            temp = Cx->head;
+            for(int j = 0; j < row; j++){
+                if(temp->next == NULL){
+                    endOfPile++;
+                    temp = NULL;
+                    break;
                 }
-                if(dontPrint){printCard(cn->card);}
-                
-                
-            } else
-            {
-                tails++;
+                temp = temp->next;
             }
-            printf("\t");
-            if(tails >= 7 && line >= 6) {done = 1;}
-            pile = pile->next;
-            dontPrint = 1;
         }
-        if (line == 0 || line == 2 || line == 4 || line == 6)
-            {
-                if(foundation->tail != NULL) {
-                    cn = foundation->tail;
-                    printCard(cn->card);
-                }
-                else {
-                    printf("[]");
-                }
-                printf(" %s", foundation->id);
-                foundation = foundation->next;
+       
+
+        //print content of node
+        if(temp == NULL){
+           printf(".");
+        } else {
+
+            if(temp->isHidden == 0){
+                printSuit(temp->type);
+                printf("%c", temp->value);
+            } else{
+                printf("[]");
             }
-        tails == 0;
-        line++;
-        printf("\n");
+
+        }
+
+        printf("\t");
+       
+        column++;
+        if(column == 7) {
+            if(row == 0 || row == 2 || row == 4 || row == 6){
+
+                if(F1->tail != NULL){
+                    printSuit(F1->tail->type);
+                    printf("%c", F1->tail->value);
+            
+                }else{ printf("[]");}
+                
+                printf("\tF%d", (row/2)+1);
+
+                if(F1->next != NULL) {
+                F1 = F1->next;
+                }
+
+            }
+
+
+            if(endOfPile == 7 && row > 6){break;}
+            endOfPile = 0; 
+            printf("\n");
+            row++;
+        }
+        column = column%7;
+        
     }
-    }
-    printf("LAST Command: %s\n", lastCom);
+    
+    
+    printf("\nLAST Command: %s\n", lastCom);
     printf("Message: %s\n", message);
     printf("INPUT > ");
 }
-void printCard(Card* card)
-{
-    if (card->isHidden == 0)
-    {
-        printf("%c", card->value);
-        printf("%c", card->type);
-        
-    }
-    else
-    {
-        printf("[]");
-    }
-}
 
-//Creates all struct Card information
-void initCards()
-{
-    int count = DECK_SIZE;
-    int j = 0;
-    for (int j = 0; j < 4; j++) {
-        for (int i = 0; i < count/4; i++) {
-        // Order goes 0 = hearts, 1 = diamonds, 2 = spades, 3 = clovers
-        deck[i][j].value = values[i];
-        deck[i][j].type = types[j];
-        deck[i][j].isHidden = 0;
-        }
-        
-    }
-}
 void initPilesNFoundations() {
     
-    C1 = (Pile*)malloc(sizeof(struct Pile));
-    strcpy(C1->id, "C1");
-    C1->prev = NULL; C1->next = NULL; C1->tail = NULL; C1->head = NULL;
-    
-    F1 = (Foundation*)malloc(sizeof(struct Foundation));
-    strcpy(F1->id, "F1"); 
-    F1->prev = NULL; F1->next = NULL; F1->tail = NULL; F1-> head = NULL;
-    int piles, foundations;
-    piles = COLUM_SIZE - 1;
-    foundations = FOUNDATION_SIZE - 1;
-    
-    char pId[2];
-    char fId[2];
-    for (int j = 0; j < foundations; j++)
-    {
-        sprintf(fId, "F%d", j+2);
-        appendFoundation(F1, fId);
-    }
-
-    for (int i = 0; i < piles; i++)
-    {   
-        sprintf(pId, "C%d", i+2);
-        appendPile(C1, pId);
-        
-    }
+   for(int i = 0; i < 12; i++){
+       createPile();
+   }
 }
 
 void createPile() {
     if(pileHead != NULL){
-        struct Pile* temp1 = malloc(sizeof(struct Pile));
-        temp1->next = NULL; 
-        temp1->prev = pileTail; 
-        pileTail->next = temp1;
-        pileTail = temp1;
+        struct Pile* temp = malloc(sizeof(struct Pile));
+        temp->next = NULL; 
+        temp->prev = pileTail; 
+        pileTail->next = temp;
+        pileTail = temp;
+
+        temp->head=NULL;
+        temp->tail= NULL;
+
+        temp->cardsInPile = 0;
     } else { // List is empty
         pileHead = malloc(sizeof(struct Pile));	// Setting up space in the memory for the 1st node.
         pileHead->prev = NULL;
         pileHead->next = NULL;
         
+        pileHead->head=NULL;
+        pileHead->tail= NULL;
+
+        pileHead->cardsInPile = 0;
         pileTail = pileHead;
-        
     }
 }
 void removePile() {
@@ -302,18 +235,20 @@ void removePile() {
 }
 
 void createNode() {
-    struct CardNode* temp1 = malloc(sizeof(struct CardNode));
-    if(pileHead->head != NULL){
-        temp1->next = NULL; 
-        temp1->prev = pileHead->tail; 
-        pileHead->tail->next = temp1;
-        pileHead->tail = temp1;
+    struct CardNode* temp = malloc(sizeof(struct CardNode));
+    if(pileTail->head != NULL){
+        temp->next = NULL; 
+        temp->prev = pileTail->tail; 
+        pileTail->tail->next = temp;
+        pileTail->tail = temp;
+        pileTail->cardsInPile++;
     } else { // List is empty
-        temp1->prev = NULL;
-        temp1->next = NULL;
+        temp->prev = NULL;
+        temp->next = NULL;
         
-        pileHead->head = temp1;
-        pileHead->tail = temp1;
+        pileTail->head = temp;
+        pileTail->tail = temp;
+        pileTail->cardsInPile++;
     
     }
 }
@@ -322,56 +257,115 @@ int removeNode() {
         struct CardNode* temp1;
         if(pileHead->tail->prev != NULL){
             temp1 = pileHead->tail->prev;
-            pileHead.tail = pileHead->tail->prev;
+            pileHead->tail = pileHead->tail->prev;
             free(temp1);
-            pileHead.tail->next = NULL;
+            pileHead->tail->next = NULL;
             return 1;
         } else {
             //Last node in the list.
-            free(pileHead.tail);
-            pileHead.head = NULL;
-            pileHead.tail = NULL;
+            free(pileHead->tail);
+            pileHead->head = NULL;
+            pileHead->tail = NULL;
             return 0;
         }
     }
     return 0;
 }
+void moveCardAtIndex(Pile *fromPile, Pile *toPile, int cardIndex) {
+    CardNode *temp;
+    if(fromPile->head == NULL) {
+        strcpy(message, "Error moves cards pile empty");
+        return;
+    }
 
-void moveCard(Pile *fromPile, Pile *toPile) {
-    struct CardNode* temp1;
-    temp1 = fromPile->tail;
+    for (int i = 0; i < cardIndex; i++)
+    {   
+        if(i == 0) {
+            temp = fromPile->head;
+        } else {
+            if(temp->next == NULL) {
+            strcpy(message, "Index out of bounds");
+            return;
+            }
+            temp = temp->next;
+        }
+    }
+    
+    if(temp->prev == NULL) {
+        if(temp->next == NULL) {
+            // Last card in from pile
+            fromPile->tail = NULL;
+            fromPile->head = NULL;
+        } 
+        else {
+            // Card is head
+            fromPile->head = temp->next;
+            fromPile->head->prev = NULL;
+
+        }
+    } else if(temp->next == NULL) {
+        // Card is the tail of pile
+        fromPile->tail = temp->prev;
+        fromPile->tail->next = NULL;
+        
+    } else {
+         // Card is in between 2 cards
+        temp->prev->next = temp->next;
+        temp->next->prev = temp->prev;
+    }
+    fromPile->cardsInPile--;
+    
+    if(toPile->head == NULL) {
+        toPile->head = temp;
+        toPile->tail = temp;
+        temp->next = NULL;
+        temp->prev = NULL;
+        toPile->cardsInPile++;
+    } else {
+        toPile->tail->next = temp;
+        temp->prev = toPile->tail;
+        temp->next  = NULL;
+        toPile->tail = temp;
+        toPile->cardsInPile++;
+    }
+
+}
+void moveTailCard(Pile *fromPile, Pile *toPile) {
+    struct CardNode* temp;
+    if(fromPile->tail == NULL) {
+        return;
+    }
+    temp = fromPile->tail;
     // Move pointers for the piles
-    if(temp1->prev == NULL) {
+    if(temp->prev == NULL) {
         // Last card in Pile
         fromPile->tail = NULL;
         fromPile->head = NULL;
-
+        fromPile->cardsInPile--;
     } else {
         // Multiple cards left in Pile
         fromPile->tail = fromPile->tail->prev;
+        temp->prev->next = NULL;
+        temp->prev = NULL;
+        fromPile->cardsInPile--;
     }
     
-    // Now we want to move the pointer of the cards
-    if(temp1->prev == NULL) {
-        // Last card in pile, do nothing.
-    } else {
-        temp1->prev->next = NULL;
-        temp1->prev = NULL;
-    }
 
     //Insert card into new pile
     if(toPile->tail == NULL) {
         // Pile is empty
-        toPile->tail = temp1;
-        toPile->head = temp1;
+        toPile->tail = temp;
+        toPile->head = temp;
+        toPile->cardsInPile++;
     } else {
         // If not empty add to the end of tail.
-        toPile->tail->next = temp1;
-        temp1->prev = toPile->tail;
-        toPile->tail = temp1;
+        toPile->tail->next = temp;
+        temp->prev = toPile->tail;
+        toPile->tail = temp;
+        toPile->cardsInPile++;
     }
 }
-void moveCards(Pile *fromPile, Pile *toPile, int cardIndex) {
+void moveCardsFromIndex(Pile *fromPile, Pile *toPile, int cardIndex) {
     if(fromPile->head == NULL) {
         strcpy(message, "Error moves cards pile empty");
         return;
@@ -384,7 +378,7 @@ void moveCards(Pile *fromPile, Pile *toPile, int cardIndex) {
             temp1 = temp1->next;
         }
         if(cardIndex != count && temp1->next == NULL) {
-            strcpy(message, "Error in move cards, selected card does not exist.")
+            strcpy(message, "Error in move cards, selected card does not exist.");
             return;
         }
         if(count == cardIndex) {
@@ -397,199 +391,220 @@ void moveCards(Pile *fromPile, Pile *toPile, int cardIndex) {
     if(temp1->prev == NULL) {
         fromPile->head = NULL;
         fromPile->tail = NULL;
+        fromPile->cardsInPile -= count;
     } else {
         fromPile->tail = temp1->prev;
+        fromPile->cardsInPile -= count;
     }
 
     // Set correct pointers for the toPile.
     if(toPile->head == NULL) {
         toPile->head = temp1;
+        toPile->cardsInPile += count;
         
     } else {
         toPile->tail->next = temp1;
-        temp1->prev = toPile->prev;
-        
+        temp1->prev = toPile->tail->prev;
+        toPile->cardsInPile += count;
     }
         while(temp1->next != NULL) {
             temp1 = temp1->next;
         }
         toPile->tail = temp1;
 }
+void moveHeadCard(Pile *fromPile, Pile *toPile) {
+    struct CardNode* temp;
+    if(fromPile->head == NULL) {
+        return;
+    }
+    temp = fromPile->head;
+    // Move pointers for the piles
+    if(temp->next == NULL) {
+        // Last card in Pile
+        fromPile->tail = NULL;
+        fromPile->head = NULL;
+        fromPile->cardsInPile--;
 
-// Load a deck of cards or create a new one if not specified
-FILE *LD(char input[])
-{
-    if (strcmp(input, "LD") == 0)
-    {
-        // Lav nyt deck ublandet
-        newDeck();
-        strcpy(message, "OK");
-        strcpy(lastCom, "LD");
-        return NULL;
+    } else {
+        // Multiple cards left in Pile
+        fromPile->head = fromPile->head->next;
+        temp->next->prev = NULL;
+        fromPile->cardsInPile--;
     }
-    if (access(input, F_OK) == 0)
-    {
-        strcpy(message, "OK");
-        strcpy(lastCom, ("LD %s", input));
-        return fopen(input, "r");
-    }
-    else
-    {
-        strcpy(message, "FILE 404 NOT FOUND");
-        strcpy(lastCom, ("LD %s", input));
-        return NULL;
+    
+    //Insert card into new pile
+    if(toPile->tail == NULL) {
+        // Pile is empty
+        toPile->tail = temp;
+        toPile->head = temp;
+        toPile->cardsInPile++;
+    } else {
+        // If not empty add to the end of tail.
+        toPile->tail->next = temp;
+        temp->prev = toPile->tail;
+        toPile->tail = temp;
+        temp->next = NULL;
+        toPile->cardsInPile++;
     }
 }
-void SW() {
-    Pile *pile = C1;
-    
-    CardNode *node = C1->head;
-    
-    Card *card;
-    
-    for (int i = DECK_SIZE; i > 0; i--)
-    {   
-        card = node->card;
-        card->isHidden = 0;
-        if(node->next == NULL) {
-            pile = pile->next;
-            node = pile->head;
-        } else {
-            node = node->next;
+int loadFile(char *filename) {
+    char tempArray[5];
+
+    FILE *fp;
+    fp = fopen (filename, "r");
+    if(fp==NULL) { 
+        return 0;
+    }
+    while(!feof(fp)){
+
+       fgets(tempArray, 5, fp);
+       if(tempArray[strlen(tempArray)-1] == 5) {
+           // Housekeeping delete all nodes (wrong format)
+           return 1;
+       }
+       if(tempArray[strlen(tempArray)-1]== '\n'){
+            tempArray[strlen(tempArray)-1] = 0;
         }
+        createNode();
+        pileTail->tail->value = tempArray[1];
+        pileTail->tail->type = tempArray[0];
+        pileTail->tail->isHidden = 1;
         
+    }
+    fclose(fp);
+    return 2;
+}
+
+// Load a deck of cards or create a new one if not specified
+void LD(char input[])
+{
+    // Remember to split the function to validate if input is "LD" or "LD <filename>"
+    int status;
+        // Lav nyt deck ublandet
+        status = loadFile("cards.txt");
+        if(status == 0) {
+            strcpy(message, "Unable to open file");
+            strcpy(lastCom, input);
+            return;
+        } 
+        else if(status == 1) {
+            strcpy(message, "Wrong format of file content");
+            strcpy(lastCom, input);
+            return;
+        } 
+        else {
+            strcpy(message, "OK");
+            strcpy(lastCom, input);    
+        }
+
+        Pile *tempPile;
+        tempPile = pileHead;
+        int count = 0;
+        while(pileTail->head != NULL) {
+            moveHeadCard(pileTail, tempPile);
+            count++;
+            if(count == 7) {
+                tempPile = pileHead;
+                count = 0;
+            } else {
+                tempPile = tempPile->next;
+            }
+        }
+
+}
+
+void SW() {
+    if(pileHead == NULL) {
+        strcpy(lastCom, input);
+        strcpy(message, "No cards to show");
+        return;
+    }
+    Pile *tempPile = pileHead;
+    CardNode *tempNode = NULL;
+    int colCount = 0;
+    while (colCount < 7)
+    {   
+        if(tempPile->head != NULL) {
+            tempNode = tempPile->head;
+            while (tempNode != NULL)
+            {   
+            tempNode->isHidden = 0;
+            tempNode = tempNode->next;
+            }
+        }
+        tempPile = tempPile->next;
+        colCount++;
     }
     
 }
 void SR() {
-    CardNode *card;
-    CardNode *ref;
-    CardNode *ref2;
-    CardNode *startOfShuffled = NULL;
-    int cards = DECK_SIZE;
-    if(startOfDeck == NULL) {
-        strcpy(message, "NO DECK TO SHUFFLE");
-        strcpy(lastCom, "SR");
-        return;
-    } else {
-        time_t t;
-        srand((unsigned) time(&t));
-        card = startOfDeck;
-        ref = startOfDeck;
-        
-        while(cards != 0) {
-            for (int i = 0; i < rand() % cards+1; i++)
-            {
-                card = card->nextInDeck;
+    Pile *tempPile = pileHead;
+    Pile *ref;
+    CardNode *tempNode;
+
+    
+    time_t t;
+    srand((unsigned) time(&t));
+    int col, index, cards, r;
+    cards = DECK_SIZE;
+    col = r = 0;
+    while(cards != 0) {
+        r = (rand() % 7);
+        for (int i = 0; i < r; i++)
+        {
+            tempPile = tempPile->next;
+            col++;
+            if(col > 6) {
+                tempPile = pileHead;
+                col = 0;
             }
-            
-            card->prevInDeck->nextInDeck = card->nextInDeck;
-            card->nextInDeck->prevInDeck = card->prevInDeck;
-            
-            if(startOfDeck == NULL;) {
-                startOfDeck = card;
-                card->nextInDeck = NULL;
-                card->prevInDeck = NULL;
-            } else {
-                ref = startOfDeck;
-                while(card->nextInDeck != NULL) {
-                    
-                }
+        }
+        while( tempPile->cardsInPile == 0 || tempPile->head == NULL) {
+            tempPile->next;
+            col++;
+            if(col > 6) {
+                tempPile = pileHead;
+                col = 0;
             }
-            cards--;
         }
         
+        if(tempPile->cardsInPile == 1) {
+            moveHeadCard(tempPile, pileTail);
+        } else {
+        index = (rand() % tempPile->cardsInPile);
+        moveCardAtIndex(tempPile, pileTail, index);
+        }
+        ref = pileHead;
+        for (int i = 0; i < 7; i++)
+        {
+        printf("%d ", ref->cardsInPile);
+        ref = ref->next;
+        }
+        printf("\n");        
+        cards--; 
     }
-
-}
-
-void newDeck()
-{
-    Pile *pile = C1;
-    Card *card;
-    int type, value;
-    type = value =  0;
-        
-    for (int j = 0; j < 4; j++)
-    {
-       for (int i = 0; i < 13; i++)
-       {
-            card = &deck[i][j];
-            card->isHidden = 1;
-            CardNode *node = makeNode(card);
-            appendNodeToDeck(node);
-            assignNodeInPile(pile, node);
-            pile = pile->next;    
-       }  
-    }
-}
     
-
-int cardValue(Card card)
-{
-    switch (card.value)
-    {
-    case 'A':
-        return 1;
-        break;
-    case '2':
-        return 2;
-        break;
-    case '3':
-        return 3;
-        break;
-    case '4':
-        return 4;
-        break;
-    case '5':
-        return 5;
-        break;
-    case '6':
-        return 6;
-        break;
-    case '7':
-        return 7;
-        break;
-    case '8':
-        return 8;
-        break;
-    case '9':
-        return 9;
-        break;
-    case 'T':
-        return 10;
-        break;
-    case 'J':
-        return 11;
-        break;
-    case 'Q':
-        return 12;
-        break;
-    case 'K':
-        return 13;
-        break;
-    default:
-        break;
+    
+    
+}
+void SI(int split) {
+    // Fuck denne funktion sut diller 
+}
+ 
+        
+        
+        
+void printSuit(char type) {
+    if(type == 'H') {
+        wprintf(L"\x2665");
     }
-}
-
-int isBlack(struct Card c)
-{
-    return c.type == 'S' || c.type == 'C';
-}
-int isRed(struct Card c)
-{
-    return c.type == 'H' || c.type == 'D';
-}
-int isDifferent(struct Card c1, struct Card c2)
-{
-    return c1.type != c2.type;
-}
-int isSequencial(struct Card lower, struct Card higher)
-{
-    return higher.value == lower.value + 1;
-}
-int canFoundation(struct Card c)
-{
-    return c.value == 13;
-}
+    if(type == 'D') {
+        wprintf(L"\x2666");
+    }
+    if(type == 'S') {
+        wprintf(L"\x2660");
+    }
+    if(type == 'C') {
+        wprintf(L"\x2663");
+    }  
+ }
