@@ -4,21 +4,12 @@
 #include <string.h>
 #include <memory.h>
 #include <time.h>
-#include <wchar.h>
 
-#include<fcntl.h>
-#include<io.h>
 
 
 #define DECK_SIZE 52
 #define FOUNDATION_SIZE 4
 #define COLUM_SIZE 7
-
-wchar_t *clubs = L"\u2663";
-wchar_t *diamonds = L"\u2666";
-wchar_t *hearts = L"\u2665";
-wchar_t *spades = L"\u2660";
-
 
 typedef struct CardNode
 {
@@ -29,7 +20,6 @@ typedef struct CardNode
     struct CardNode *prev;
     
 } CardNode;
-
 typedef struct Pile
 {
     char id[2];
@@ -42,7 +32,7 @@ typedef struct Pile
 
 // Print opertaions
 void printConsole();
-void printSuit(char type);
+
 // Node functions 
 //CardNode* makeNode(Card *card);
 void createNode();
@@ -53,6 +43,7 @@ void moveTailCard(Pile *fromPile, Pile *toPile);
 void moveCardAtIndex(Pile *fromPile, Pile *toPile, int cardIndex);
 void moveCardsFromIndex(Pile *fromPile, Pile *toPile, int cardIndex);
 void moveHeadCard(Pile *fromPile, Pile *toPile);
+void dealCards();
 
 
 void newDeck();
@@ -62,7 +53,7 @@ void LD(char input[]);
 void SW();
 void SI(int split);
 void SR();
-void SD();
+void SD(char *input);
 void P();
 
 // Initialization
@@ -70,9 +61,9 @@ void initCards();
 void initPilesNFoundations();
 
 int game = 0;
-char input[10];
+char input[64];
 char message[256] = "HELLO";
-char lastCom[10] = "NONE";
+char lastCom[64] = "NONE";
 
 // First pile and foundation
 Pile *pileHead = NULL;
@@ -81,25 +72,30 @@ Pile *pileTail = NULL;
 
 int main(void)
 {
-    //setmode(_fileno(stdout), _O_U16TEXT);
+    
     initPilesNFoundations();
-    Pile *ref = pileHead->next;
+    
     LD("LD");
-    SW();
-    printConsole();
-    
-    
-    
+    //SW();
+    //SR();
+    //SD("SD cat.txt");
     //printConsole();
-    /*do
+    
+    
+    /* do
     {       
         printConsole();
-        scanf("%s", &input);
+        scanf("%[^\n]%*c", &input);
         if(strcmp(input, "SW") == 0) {SW();}
-        if(strcmp(input, "LD") == 0) {LD(input);}
-        //if(strcmp(input, "SR") == 0) {SR();}
+        else if(input[0] == 'L' && input[1] == 'D') {LD(input);}
+        else if(strcmp(input, "SR") == 0) {SR();}
+        else if(input[0] == 'S' && input[1] == 'D') {SD(input);}
+        else {
+            strcpy(message, "???????");
+            strcpy(lastCom, input);
+        }
         
-    } while (strcmp(input, "QQ") != 0); */
+    } while (strcmp(input, "QQ") != 0);  */
 }
 
 // Prints the console
@@ -142,8 +138,8 @@ void printConsole()
         } else {
 
             if(temp->isHidden == 0){
-                printSuit(temp->type);
-                printf("%c", temp->value);
+                
+                printf("%c%c",temp->value, temp->type);
             } else{
                 printf("[]");
             }
@@ -157,8 +153,8 @@ void printConsole()
             if(row == 0 || row == 2 || row == 4 || row == 6){
 
                 if(F1->tail != NULL){
-                    printSuit(F1->tail->type);
-                    printf("%c", F1->tail->value);
+                    
+                    printf("%c%c", F1->tail->value, F1->tail->type);
             
                 }else{ printf("[]");}
                 
@@ -449,68 +445,101 @@ void moveHeadCard(Pile *fromPile, Pile *toPile) {
 }
 int loadFile(char *filename) {
     char tempArray[5];
-
+    puts(filename);
     FILE *fp;
-    fp = fopen (filename, "r");
+    fp = fopen(filename, "r");
     if(fp==NULL) { 
         return 0;
     }
+    //Validate all file data
+    while (!feof(fp))
+    {
+        fgets(tempArray, 5, fp);
+        if(tempArray[strlen(tempArray)-1]== '\n'){
+            tempArray[strlen(tempArray)-1] = 0;
+        }
+        if(tempArray[strlen(tempArray)-1] == 5) {
+            // Wrong format return
+           return 1;
+        }
+        if (tempArray[0] != 'A' || '2' || '3' || '4' || '5' || '6' || '7' || '8' || '9' || 'T' || 'J' || 'Q' || 'K') {
+            // Wrong value format
+            return 1;
+        }
+        if(tempArray[1] != 'C' || 'D' || 'H' || 'S') {
+            // Wrong type format
+            return 1;
+        }
+    }
+    
     while(!feof(fp)){
 
-       fgets(tempArray, 5, fp);
-       if(tempArray[strlen(tempArray)-1] == 5) {
-           // Housekeeping delete all nodes (wrong format)
-           return 1;
-       }
-       if(tempArray[strlen(tempArray)-1]== '\n'){
+        fgets(tempArray, 5, fp);
+        
+        if(tempArray[strlen(tempArray)-1]== '\n'){
             tempArray[strlen(tempArray)-1] = 0;
         }
         createNode();
-        pileTail->tail->value = tempArray[1];
-        pileTail->tail->type = tempArray[0];
+        
+        pileTail->tail->value = tempArray[0];
+        pileTail->tail->type = tempArray[1];
         pileTail->tail->isHidden = 1;
         
     }
     fclose(fp);
     return 2;
 }
-
+void dealCards() {
+    Pile *tempPile;
+    tempPile = pileHead;
+    int count = 0;
+        
+    while(pileTail->head != NULL) {
+        moveHeadCard(pileTail, tempPile);
+        count++;
+        if(count == 7) {
+            tempPile = pileHead;
+            count = 0;
+        } else {
+            tempPile = tempPile->next;
+        }
+    }
+}
 // Load a deck of cards or create a new one if not specified
-void LD(char input[])
-{
-    // Remember to split the function to validate if input is "LD" or "LD <filename>"
-    int status;
-        // Lav nyt deck ublandet
-        status = loadFile("cards.txt");
-        if(status == 0) {
-            strcpy(message, "Unable to open file");
-            strcpy(lastCom, input);
-            return;
-        } 
-        else if(status == 1) {
-            strcpy(message, "Wrong format of file content");
-            strcpy(lastCom, input);
-            return;
-        } 
-        else {
-            strcpy(message, "OK");
-            strcpy(lastCom, input);    
-        }
-
-        Pile *tempPile;
-        tempPile = pileHead;
-        int count = 0;
-        while(pileTail->head != NULL) {
-            moveHeadCard(pileTail, tempPile);
-            count++;
-            if(count == 7) {
-                tempPile = pileHead;
-                count = 0;
-            } else {
-                tempPile = tempPile->next;
+void LD(char input[]) {
+    char filename[64] = "";
+    if(input[3] == NULL) {
+    strcpy(filename, "unshuffleddeck.txt");
+    } else {
+        // Add the inputted filename to filename[]
+        for (int i = 3; i < strlen(input); i++)
+        {
+            if(input[i] == NULL) {
+                break;
             }
-        }
-
+            filename[i-3] = input[i];
+        }    
+    }
+    puts(input);
+    puts(filename);
+    int status;
+    
+    status = loadFile(filename);
+    if(status == 0) {
+        strcpy(message, "Unable to open file");
+        strcpy(lastCom, input);
+        return;
+    } 
+    else if(status == 1) {
+        strcpy(message, "Wrong format of file content");
+        strcpy(lastCom, input);
+        return;
+    } 
+    else {
+        strcpy(message, "OK");
+        strcpy(lastCom, input);
+        dealCards();    
+    }
 }
 
 void SW() {
@@ -539,17 +568,18 @@ void SW() {
 }
 void SR() {
     Pile *tempPile = pileHead;
-    Pile *ref;
     CardNode *tempNode;
 
-    
     time_t t;
     srand((unsigned) time(&t));
+
     int col, index, cards, r;
     cards = DECK_SIZE;
-    col = r = 0;
+    r = rand() % 7;
+    col = 1;
+    // Pick a random pile
     while(cards != 0) {
-        r = (rand() % 7);
+        r = rand() % 7;
         for (int i = 0; i < r; i++)
         {
             tempPile = tempPile->next;
@@ -559,52 +589,103 @@ void SR() {
                 col = 0;
             }
         }
-        while( tempPile->cardsInPile == 0 || tempPile->head == NULL) {
-            tempPile->next;
+        // If pile is empty go to next pile that is not empty
+        while(tempPile->head == NULL) {
+            tempPile = tempPile->next;
             col++;
             if(col > 6) {
                 tempPile = pileHead;
                 col = 0;
             }
+            
         }
-        
+        // If one card i left in the pile just move the card
         if(tempPile->cardsInPile == 1) {
             moveHeadCard(tempPile, pileTail);
+            
         } else {
-        index = (rand() % tempPile->cardsInPile);
-        moveCardAtIndex(tempPile, pileTail, index);
+            // Else pick a random one in the pile and move it to shuffled pile
+            index = rand() % (tempPile->cardsInPile) + 1;
+            moveCardAtIndex(tempPile, pileTail, index);
+            
+            
         }
-        ref = pileHead;
+        tempPile = pileHead;
+        col = 1;
+        cards--;
+    }
+    dealCards();
+}
+void SD(char *input) {
+    char filename[64] = "";
+    char str[DECK_SIZE*3] = "";
+    char value, type;
+
+    int row, col, cards;
+    row = col = 1;
+    cards = DECK_SIZE;
+
+    Pile *tempPile = pileHead;
+    CardNode *tempNode;
+    FILE *outfile;
+    // If no name has been specified set to cards.txt
+    if(input[3] == NULL) {
+        strcpy(filename, "cards.txt");
+    } else {
+        // Add the inputted filename to filename[]
+        
+        for (int i = 3; i < strlen(input); i++)
+        {
+            if(input[i] == NULL) {
+                break;
+            }
+            filename[i-3] = input[i];
+        }
+    }
+    outfile = fopen(filename, "w");
+    if(outfile == NULL) {
+        strcpy(message, "File could not be opened or created");
+        strcpy(lastCom, input);
+        return;
+    }
+    // Stop when there are no more cards
+    while(cards != 0) {
+        // Go from coluum 1 to 7
         for (int i = 0; i < 7; i++)
         {
-        printf("%d ", ref->cardsInPile);
-        ref = ref->next;
+            // Set temp to head of the current pile
+            tempNode = tempPile->head;
+            // Iterate for the current row we are in
+            for (int i = 1; i < row; i++)
+            {
+                tempNode = tempNode->next;
+            }
+
+        
+            
+            value = tempNode->value;
+            type = tempNode->type;
+            strncat(str, &value, 1);
+            strncat(str, &type, 1);
+            strncat(str, "\n", 1);
+            // When done with first coluum go to next;
+            tempPile = tempPile->next;
+            cards--;
+            if(cards == 0) {
+                break;
+            }
+    
         }
-        printf("\n");        
-        cards--; 
+        // Reset temppile and go again
+        tempPile = pileHead;
+        row++;
+        
     }
+    fprintf(outfile, "%s", str);
+    fclose(outfile);
     
-    
-    
-}
-void SI(int split) {
-    // Fuck denne funktion sut diller 
-}
- 
+}  
+
         
         
-        
-void printSuit(char type) {
-    if(type == 'H') {
-        wprintf(L"\x2665");
-    }
-    if(type == 'D') {
-        wprintf(L"\x2666");
-    }
-    if(type == 'S') {
-        wprintf(L"\x2660");
-    }
-    if(type == 'C') {
-        wprintf(L"\x2663");
-    }  
- }
+
